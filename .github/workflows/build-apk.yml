@@ -48,15 +48,29 @@ jobs:
           test -f project/settings.gradle.kts
           test -f project/app/build.gradle.kts
 
-      - name: Samakan versi Java dan Kotlin
+      - name: Samakan target Java dan Kotlin
         run: |
-          sed -i 's/VERSION_1_8/VERSION_17/g' project/app/build.gradle.kts
-          sed -i 's/"1.8"/"17"/g' project/app/build.gradle.kts
-          cat project/app/build.gradle.kts
+          cat > jvm-target.init.gradle <<'EOF'
+          allprojects {
+              tasks.withType(
+                  org.gradle.api.tasks.compile.JavaCompile
+              ).configureEach {
+                  sourceCompatibility = "17"
+                  targetCompatibility = "17"
+              }
+
+              tasks.withType(
+                  org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+              ).configureEach {
+                  kotlinOptions.jvmTarget = "17"
+              }
+          }
+          EOF
 
       - name: Bangun APK
         run: |
-          gradle -p project assembleDebug
+          gradle -I jvm-target.init.gradle \
+            -p project assembleDebug
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
