@@ -28,6 +28,8 @@ jobs:
 
       - name: Pasang komponen Android
         run: |
+          yes | sdkmanager --licenses
+          sdkmanager --install "platform-tools"
           sdkmanager --install "platforms;android-35"
           sdkmanager --install "build-tools;35.0.0"
 
@@ -43,9 +45,14 @@ jobs:
 
       - name: Periksa proyek
         run: |
-          ls -la project
           test -f project/settings.gradle.kts
           test -f project/app/build.gradle.kts
+
+      - name: Samakan versi Java dan Kotlin
+        run: |
+          sed -i 's/VERSION_1_8/VERSION_17/g' project/app/build.gradle.kts
+          sed -i 's/"1.8"/"17"/g' project/app/build.gradle.kts
+          cat project/app/build.gradle.kts
 
       - name: Bangun APK
         run: |
