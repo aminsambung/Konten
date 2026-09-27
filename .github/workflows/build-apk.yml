@@ -12,54 +12,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Mengambil kode dari repository
       - name: Ambil kode sumber
         uses: actions/checkout@v4
 
-      # Menyiapkan Java
       - name: Siapkan Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      # Menyiapkan Android SDK
       - name: Siapkan Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools"
 
-      # Memasang komponen Android
       - name: Pasang komponen Android
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platform-tools"
           sdkmanager --install "platforms;android-35"
           sdkmanager --install "build-tools;35.0.0"
 
-      # Menyiapkan Gradle
       - name: Siapkan Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
 
-      # Mengekstrak proyek
       - name: Ekstrak proyek
         run: |
           mkdir -p project
           unzip -o CatatanKeuangan-Siap-Build-Online.zip -d project
 
-      # Memeriksa berkas proyek
       - name: Periksa proyek
         run: |
           ls -la project
           test -f project/settings.gradle.kts
           test -f project/app/build.gradle.kts
 
-      # Membuat APK
       - name: Bangun APK
         run: |
           gradle -p project assembleDebug
 
-      # Menyimpan APK agar bisa diunduh
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
