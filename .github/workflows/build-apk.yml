@@ -12,66 +12,90 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Mengambil kode dari repository
       - name: Ambil kode sumber
         uses: actions/checkout@v4
 
+      # Menyiapkan Java 17
       - name: Siapkan Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
+      # Menyiapkan Android SDK
       - name: Siapkan Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
-          packages: "platform-tools"
+          packages: platform-tools
 
+      # Memasang Android SDK yang dibutuhkan
       - name: Pasang komponen Android
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platform-tools"
           sdkmanager --install "platforms;android-35"
           sdkmanager --install "build-tools;35.0.0"
 
+      # Menyiapkan Gradle
       - name: Siapkan Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
 
+      # Mengekstrak kode sumber
       - name: Ekstrak proyek
         run: |
           mkdir -p project
           unzip -o CatatanKeuangan-Siap-Build-Online.zip -d project
 
+      # Memeriksa struktur proyek
       - name: Periksa proyek
         run: |
           test -f project/settings.gradle.kts
           test -f project/app/build.gradle.kts
+          echo "Struktur proyek ditemukan"
 
-      - name: Samakan target Java dan Kotlin
+      # Memperbaiki target Java menjadi 17
+      - name: Perbaiki konfigurasi Java
         run: |
-          cat > jvm-target.init.gradle <<'EOF'
-          allprojects {
-              tasks.withType(
-                  org.gradle.api.tasks.compile.JavaCompile
-              ).configureEach {
-                  sourceCompatibility = "17"
-                  targetCompatibility = "17"
-              }
+          python3 - <<'PY'
+          from pathlib import Path
 
-              tasks.withType(
-                  org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-              ).configureEach {
-                  kotlinOptions.jvmTarget = "17"
-              }
-          }
-          EOF
+          file = Path("project/app/build.gradle.kts")
+          content = file.read_text()
 
+          if "compileOptions {" not in content:
+              content = content.replace(
+                  "android {",
+                  """android {
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+          """,
+                  1
+              )
+
+          file.write_text(content)
+
+          print("Konfigurasi Java:")
+          print(file.read_text())
+          PY
+
+      # Memastikan konfigurasi Java sudah benar
+      - name: Periksa target Java
+        run: |
+          grep -A 4 "compileOptions" \
+            project/app/build.gradle.kts
+
+      # Membuat APK
       - name: Bangun APK
         run: |
-          gradle -I jvm-target.init.gradle \
-            -p project assembleDebug
+          gradle \
+            -p project \
+            --no-daemon \
+            assembleDebug
 
+      # Menyimpan APK agar dapat diunduh
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
